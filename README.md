@@ -38,6 +38,12 @@ deploys the monitoring stack and the application. One `make all` builds the whol
 
 [GUIDE.md](GUIDE.md) walks through each step, how to check it worked, and troubleshooting.
 
+## CI/CD pipeline
+
+[k8-pipeline](https://gitlab.com/personal2030641/k8-pipeline) automates changes to this cluster.
+One Ansible and Helm workflow runs from both GitLab CI and Jenkins: lint, an Ansible dry run, a
+manual approval, apply, Helm deploy with rollback on failure, and a smoke test.
+
 ## Hand-offs between tools
 
 - Terraform writes `ansible/inventories/local/hosts.yml`, so Ansible knows the VMs.
