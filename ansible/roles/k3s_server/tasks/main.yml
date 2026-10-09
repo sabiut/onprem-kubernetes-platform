@@ -1,0 +1,46 @@
+---
+- name: Install k3s server (control plane)
+  ansible.builtin.shell: >-
+    curl -sfL https://get.k3s.io |
+    INSTALL_K3S_VERSION={{ k3s_version }}
+    sh -s - server
+    --write-kubeconfig-mode 644
+    --node-ip {{ ansible_host }}
+    --tls-san {{ ansible_host }}
+  args:
+    creates: /usr/local/bin/k3s
+
+- name: k3s running
+  ansible.builtin.service:
+    name: k3s
+    state: started
+    enabled: true
+
+- name: Wait for the join token
+  ansible.builtin.wait_for:
+    path: /var/lib/rancher/k3s/server/node-token
+
+- name: Read the join token (workers need it)
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_token_raw
+  no_log: true
+
+- name: Share token with other hosts
+  ansible.builtin.set_fact:
+    k3s_token: "{{ k3s_token_raw.content | b64decode | trim }}"
+  no_log: true
+
+- name: Read kubeconfig
+  ansible.builtin.slurp:
+    src: /etc/rancher/k3s/k3s.yaml
+  register: k3s_kubeconfig
+  no_log: true
+
+- name: Save kubeconfig on this machine (pointing at the VM IP)
+  ansible.builtin.copy:
+    content: "{{ k3s_kubeconfig.content | b64decode | replace('127.0.0.1', ansible_host) | replace(': default', ': k8slab') }}"
+    dest: "{{ kubeconfig_dest }}"
+    mode: "0600"
+  delegate_to: localhost
+  become: false

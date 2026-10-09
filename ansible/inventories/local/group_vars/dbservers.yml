@@ -1,0 +1,5 @@
+---
+postgres_db: appdb
+postgres_user: appuser
+# Demo only. In production this comes from Ansible Vault.
+postgres_password: "{{ lookup('ansible.builtin.password', playbook_dir + '/../../.keys/db_password length=24 chars=ascii_letters,digits') }}"

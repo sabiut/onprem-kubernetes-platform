@@ -1,0 +1,17 @@
+---
+- name: Join the cluster as a worker
+  ansible.builtin.shell: >-
+    curl -sfL https://get.k3s.io |
+    INSTALL_K3S_VERSION={{ k3s_version }}
+    K3S_URL=https://{{ hostvars[groups['k3s_server'][0]].ansible_host }}:6443
+    K3S_TOKEN={{ hostvars[groups['k3s_server'][0]].k3s_token }}
+    sh -s - agent --node-ip {{ ansible_host }}
+  args:
+    creates: /usr/local/bin/k3s
+  no_log: true
+
+- name: k3s-agent running
+  ansible.builtin.service:
+    name: k3s-agent
+    state: started
+    enabled: true

@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "webapp.name" . }}-config
+  labels: {{- include "webapp.labels" . | nindent 4 }}
+data:
+  {{- range $k, $v := .Values.settings }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}
+  default.conf: |
+    server {
+      listen 80;
+      root /usr/share/nginx/html;
+      location / { index index.html; }
+    }
+    # Internal status page for the metrics exporter
+    server {
+      listen 8081;
+      location /stub_status { stub_status; }
+    }
+  index.html: |
+    <h1>{{ .Values.message }}</h1>
+    <p>Environment: {{ .Values.environment }}</p>
+    <p>Release: {{ .Release.Name }} (chart {{ .Chart.Version }}, revision {{ .Release.Revision }})</p>
+    <p><a href="/db.txt">Database check</a></p>

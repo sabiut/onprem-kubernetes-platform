@@ -1,0 +1,49 @@
+---
+- name: Install PostgreSQL
+  ansible.builtin.apt:
+    name: [postgresql, python3-psycopg2]
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Find the installed major version
+  ansible.builtin.find:
+    paths: /etc/postgresql
+    file_type: directory
+  register: pg_versions
+
+- name: Remember config directory
+  ansible.builtin.set_fact:
+    pg_conf_dir: "{{ (pg_versions.files | map(attribute='path') | sort | last) }}/main"
+
+- name: Listen on all interfaces
+  ansible.builtin.lineinfile:
+    path: "{{ pg_conf_dir }}/postgresql.conf"
+    regexp: "^#?listen_addresses"
+    line: "listen_addresses = '*'"
+  notify: Restart postgresql
+
+- name: Allow the lab network (Kubernetes pods come from the node IPs)
+  community.postgresql.postgresql_pg_hba:
+    dest: "{{ pg_conf_dir }}/pg_hba.conf"
+    contype: host
+    databases: "{{ postgres_db }}"
+    users: "{{ postgres_user }}"
+    source: "{{ postgres_allowed_cidr }}"
+    method: scram-sha-256
+  notify: Restart postgresql
+
+- name: Apply config before creating users
+  ansible.builtin.meta: flush_handlers
+
+- name: Create the app user
+  community.postgresql.postgresql_user:
+    name: "{{ postgres_user }}"
+    password: "{{ postgres_password }}"
+  become_user: postgres
+  no_log: true
+
+- name: Create the app database
+  community.postgresql.postgresql_db:
+    name: "{{ postgres_db }}"
+    owner: "{{ postgres_user }}"
+  become_user: postgres

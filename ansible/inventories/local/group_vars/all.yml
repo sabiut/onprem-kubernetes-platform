@@ -1,0 +1,6 @@
+---
+timezone: Australia/Sydney
+lab_network: 10.17.0.0/24
+k3s_version: v1.34.1+k3s1
+# Where the cluster's kubeconfig is saved on this machine
+kubeconfig_dest: "{{ playbook_dir }}/../../kubeconfig/local.yaml"

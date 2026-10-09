@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "webapp.name" . }}
+  labels: {{- include "webapp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "webapp.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "webapp.selector" . | nindent 8 }}
+      annotations:
+        # Config or secret change -> new hash -> Kubernetes rolls out new pods
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      initContainers:
+        # Runs before the app starts: proves the pod can reach PostgreSQL
+        - name: db-check
+          image: postgres:18-alpine
+          envFrom:
+            - secretRef:
+                name: {{ include "webapp.name" . }}-db
+          command: ["sh", "-c"]
+          args:
+            - |
+              until pg_isready -t 3; do echo "waiting for database $PGHOST"; sleep 3; done
+              {
+                echo "Connected to $PGHOST:$PGPORT/$PGDATABASE as $PGUSER"
+                psql -tAc "select version();"
+                psql -tAc "select 'server time: ' || now();"
+              } > /work/db.txt
+              cat /work/db.txt
+          volumeMounts:
+            - name: work
+              mountPath: /work
+      containers:
+        - name: web
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: {{ include "webapp.name" . }}-config
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+            - name: work
+              mountPath: /usr/share/nginx/html/db.txt
+              subPath: db.txt
+            - name: html
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+          readinessProbe:
+            httpGet: {path: /, port: http}
+          livenessProbe:
+            httpGet: {path: /, port: http}
+            initialDelaySeconds: 10
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+        {{- if .Values.metrics.enabled }}
+        - name: metrics
+          image: {{ .Values.metrics.image }}
+          args: ["--nginx.scrape-uri=http://localhost:8081/stub_status"]
+          ports:
+            - name: metrics
+              containerPort: 9113
+          resources:
+            requests: {cpu: 5m, memory: 16Mi}
+            limits: {cpu: 50m, memory: 32Mi}
+        {{- end }}
+      volumes:
+        - name: html
+          configMap:
+            name: {{ include "webapp.name" . }}-config
+        - name: work
+          emptyDir: {}

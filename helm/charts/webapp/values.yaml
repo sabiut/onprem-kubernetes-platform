@@ -1,0 +1,50 @@
+# Defaults. Each environment overrides these with its own values file
+# (for example helm/values/values-local.yaml) and --set for secrets.
+replicaCount: 2
+
+image:
+  repository: nginx
+  tag: 1.29-alpine
+  pullPolicy: IfNotPresent
+
+message: "Hello from the webapp"
+environment: dev
+
+settings:
+  LOG_LEVEL: info
+  FEATURE_X: "false"
+
+database:
+  host: ""          # RDS endpoint (EKS) or the db VM IP (local)
+  port: 5432
+  name: appdb
+  user: appuser
+  password: ""      # always passed with --set, never committed
+  sslmode: prefer
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: ""     # alb on EKS, traefik on k3s
+  host: ""          # empty = match any host
+  annotations: {}
+
+# Prometheus metrics: an exporter sidecar reads nginx's status page,
+# and a ServiceMonitor tells Prometheus to scrape it.
+metrics:
+  enabled: true
+  image: nginx/nginx-prometheus-exporter:1.4
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi

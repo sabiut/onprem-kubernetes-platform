@@ -1,0 +1,55 @@
+# kube-prometheus-stack: Prometheus + Grafana + Alertmanager + node-exporter + kube-state-metrics
+# Chart version is pinned in the Makefile (KPS_VERSION).
+
+# The control plane is not reachable for scraping (AWS-managed on EKS,
+# embedded in the k3s binary locally), so turn those targets off to avoid false alerts.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    # Pick up ServiceMonitors from every namespace, not only ones labelled for this release
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 2d
+    # Lab: no persistent volume, data is lost if the pod restarts
+    resources:
+      requests: {cpu: 100m, memory: 400Mi}
+      limits: {memory: 800Mi}
+
+grafana:
+  admin:
+    # Secret created by "make monitoring" with a random password
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  defaultDashboardsTimezone: Australia/Sydney
+  persistence:
+    enabled: false
+  # 256Mi was too low: Grafana was OOMKilled when loading dashboards
+  resources:
+    requests: {cpu: 50m, memory: 256Mi}
+    limits: {memory: 512Mi}
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: {cpu: 10m, memory: 32Mi}
+      limits: {memory: 64Mi}
+
+prometheusOperator:
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 128Mi}
+
+kube-state-metrics:
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 128Mi}

@@ -1,0 +1,27 @@
+---
+- name: Wait for the VM to finish cloud-init
+  ansible.builtin.command: cloud-init status --wait
+  changed_when: false
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: All nodes know each other by name
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "\\s{{ item }}$"
+    line: "{{ hostvars[item].ansible_host }} {{ item }}"
+  loop: "{{ groups['all'] }}"
+
+- name: Time sync running (certificates and clusters depend on it)
+  ansible.builtin.service:
+    name: chrony
+    state: started
+    enabled: true

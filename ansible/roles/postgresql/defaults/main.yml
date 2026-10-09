@@ -1,0 +1,5 @@
+---
+postgres_db: appdb
+postgres_user: appuser
+postgres_password: change-me
+postgres_allowed_cidr: "{{ lab_network }}"

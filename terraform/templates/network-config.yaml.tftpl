@@ -1,0 +1,12 @@
+version: 2
+ethernets:
+  primary:
+    match:
+      name: "e*"
+    addresses:
+      - ${ip}/${prefix}
+    routes:
+      - to: default
+        via: ${gateway}
+    nameservers:
+      addresses: [${gateway}]

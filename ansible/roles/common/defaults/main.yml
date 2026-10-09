@@ -1,0 +1,2 @@
+---
+common_packages: [curl, ca-certificates, vim, htop, chrony, python3-apt]

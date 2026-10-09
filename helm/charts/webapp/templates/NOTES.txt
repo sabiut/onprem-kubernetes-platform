@@ -1,0 +1,4 @@
+{{ include "webapp.name" . }} deployed to namespace {{ .Release.Namespace }}.
+
+  kubectl -n {{ .Release.Namespace }} get pods,svc,ingress
+  kubectl -n {{ .Release.Namespace }} logs deploy/{{ include "webapp.name" . }} -c db-check

@@ -1,0 +1,10 @@
+# Local k3s: traefik is the built-in ingress controller.
+environment: local-k3s
+message: "Hello from self-managed Kubernetes (Terraform + Ansible + Helm)"
+replicaCount: 2
+database:
+  host: 10.17.0.30      # db1 VM, configured by Ansible
+  sslmode: disable
+ingress:
+  enabled: true
+  className: traefik
